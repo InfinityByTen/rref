@@ -1,5 +1,5 @@
 // Matrix wrapper with basic serialization helper methods.
-// Functions boost wrapper for uBlas Matrices.
+// Inherits from boost wrapper for uBlas Matrices.
 
 #pragma once
 
@@ -9,36 +9,16 @@
 #include <boost/numeric/ublas/matrix.hpp>
 
 using Number = boost::multiprecision::mpq_rational;
-using Matrix = boost::numeric::ublas::matrix<Number>;
 
-
-static void
-print( Matrix& mat )
+class Matrix : public boost::numeric::ublas::matrix<Number>
 {
-    for (size_t i = 0; i < mat.size1( ); ++i)
-    {
-        for (size_t j = 0; j < mat.size2( ); ++j)
-        {
-            std::cout << mat(i, j)<<"\t";
-        }
-        std::cout << std::endl;
-    }
-    std::cout<<std::endl;
-}
+public:
+    // Initializes an empty matrix of size rows x columns
+    Matrix(size_t rows, size_t columns);
 
+    // Pretty prints out the full matrix.
+    void print( ) const;
 
-static void
-input( Matrix& mat)
-{
-    for (size_t i = 0; i < mat.size1(); ++i)
-    {
-        for (size_t j = 0; j < mat.size2(); ++j)
-        {
-            Number n;
-            std::cin>>n;
-            mat.insert_element(i,j,n);
-            std::cout<<std::endl;
-        }
-    }
-}
-
+    // Inputs the matrix entry by entry row-wise
+    void input( );
+};

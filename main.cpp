@@ -13,9 +13,8 @@ int main(int argc, char const *argv[])
     Matrix mat(rows, columns);
     std::cout<<"Matrix of "<<mat.size1()<<"x"<<mat.size2()<<std::endl;
 
-    input(mat);
-
-    print(mat);
+    mat.input();
+    mat.print();
 
     return 0;
 }
