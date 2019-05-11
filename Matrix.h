@@ -5,9 +5,10 @@
 
 #include <iostream>
 
+#include <boost/multiprecision/gmp.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 
-using Number = int;
+using Number = boost::multiprecision::mpq_rational;
 using Matrix = boost::numeric::ublas::matrix<Number>;
 
 
