@@ -19,9 +19,9 @@ int main(int argc, char const *argv[])
     std::cout<<std::endl;
     mat.print();
 
-    if( gauss_elimination(mat) )
+    if( rref(mat) )
     {
-        std::cout<<"Your matrix after Gauss Elimination is:"<<std::endl;
+        std::cout<<"The Reduced Row Rchelon Form (RREF) of your matrix is:"<<std::endl;
         mat.print();
     }
     else
