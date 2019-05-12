@@ -13,7 +13,8 @@ Matrix::Matrix(size_t rows, size_t columns, const std::vector<Number>& entries)
 {
     if(rows*columns != entries.size())
     {
-        throw "FailueIncomplete or excess entries";
+        std::cout<<"Failed to create Matrix Exception: Incomplete or excess entries";
+        throw "exception";
     }
     boost::numeric::ublas::unbounded_array<Number> storage(entries.size());
     std::copy(entries.begin(), entries.end(),storage.begin());
