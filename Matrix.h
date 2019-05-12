@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <iostream>
-
 #include <boost/multiprecision/gmp.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 

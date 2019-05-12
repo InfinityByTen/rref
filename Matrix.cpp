@@ -2,6 +2,8 @@
 
 #include "Matrix.h"
 
+#include <iostream>
+
 Matrix::Matrix(size_t rows, size_t columns)
 : boost::numeric::ublas::matrix<Number>(rows, columns)
 {

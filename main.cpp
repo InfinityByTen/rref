@@ -1,5 +1,6 @@
 
 #include "Matrix.h"
+#include "MatrixAlgorithms.h"
 
 int main(int argc, char const *argv[])
 {
@@ -14,6 +15,12 @@ int main(int argc, char const *argv[])
     std::cout<<"Matrix of "<<mat.size1()<<"x"<<mat.size2()<<std::endl;
 
     mat.input();
+
+    std::cout<<std::endl;
+    mat.print();
+
+    gauss_elimination(mat);
+    std::cout<<"Your matrix after Gauss Elimination is:"<<std::endl;
     mat.print();
 
     return 0;
