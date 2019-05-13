@@ -4,6 +4,7 @@
 
 #include <boost/optional.hpp>
 
+#include <chrono>
 #include <utility>
 
 /* gets the maximum absolute entry in the given column starting from a row index.
@@ -84,19 +85,46 @@ normalize( Matrix& mat, size_t row_index )
     }
 }
 
+void
+publish_metrics( std::chrono::duration< double > elapsed,
+                 std::chrono::duration< double > pivoting,
+                 std::chrono::duration< double > normalization,
+                 std::chrono::duration< double > gauss_elimination )
+{
+    std::cout << "Total execution Time : " << elapsed.count( ) << std::endl;
+    std::cout << "Pivoting: " << ( pivoting.count( ) / elapsed.count( ) ) * 100 << "/%"
+              << std::endl;
+    std::cout << "Normalization: " << ( normalization.count( ) / elapsed.count( ) ) * 100 << "/%"
+              << std::endl;
+    std::cout << "Gauss Elimination: " << ( gauss_elimination.count( ) / elapsed.count( ) ) * 100
+              << "/%" << std::endl;
+}
+
 // computes the reduced row echelon form of a matrix.
 // returns false if a division by zero error happens and true on success
 bool
 rref( Matrix& mat )
 {
+    auto start = std::chrono::high_resolution_clock::now( );
+    std::chrono::duration< double > pivoting;
+    std::chrono::duration< double > normalization;
+    std::chrono::duration< double > gauss_elim;
+
     for ( size_t iteration = 0; iteration < mat.rows( ); ++iteration )
     {
+        auto tick = std::chrono::high_resolution_clock::now( );
         auto p = partial_pivot( mat, iteration );
-        normalize( mat, iteration );
+        pivoting += ( std::chrono::high_resolution_clock::now( ) - tick );
 
+        auto tick_norm = std::chrono::high_resolution_clock::now( );
+        normalize( mat, iteration );
+        normalization += ( std::chrono::high_resolution_clock::now( ) - tick_norm );
+
+        auto tick_gs = std::chrono::high_resolution_clock::now( );
         // TODO: extract out below as gauss elimination step
         if ( p == mat.columns( ) )
         {
+            // all zero row. Exit gauss elimination.
             break;
         }
 
@@ -120,6 +148,10 @@ rref( Matrix& mat )
                 mat( row, column ) -= mat( iteration, column ) * factor;
             }
         }
+        gauss_elim += ( std::chrono::high_resolution_clock::now( ) - tick_gs );
     }
+    std::chrono::duration< double > elapsed
+        = ( std::chrono::high_resolution_clock::now( ) - start );
+    publish_metrics( elapsed, pivoting, normalization, gauss_elim );
     return true;
 }
