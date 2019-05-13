@@ -13,7 +13,7 @@ test_example( std::string test_name,
 {
     Matrix mat1( row, column, input );
     Matrix mat2( row, column, expected );
-    std::cout << test_name << ": \t"
+    std::cout << test_name << ":" << std::endl
               << ( rref( mat1 ) && mat1 == mat2 ? "Test Passed" : "Test Failed" ) << std::endl;
 }
 
@@ -40,6 +40,12 @@ main( int argc, char const* argv[] )
     std::vector< Number > basic3{8, 1, 6, 3, 5, 7, 4, 9, 2};
     std::vector< Number > basic3_rref{1, 0, 0, 0, 1, 0, 0, 0, 1};
     test_example( "Complete RREF", 3, 3, basic3, basic3_rref );
+
+    // check for rectangular matrices
+    std::vector< Number > rectangular{0, 3, -6, 6, 4, -5, 3, -7, 8, -5, 8, 9, 3, -9, 12, -9, 6, 15};
+    std::vector< Number > rectangular_rref{1, 0, -2, 3, 0, -24, 0, 1, -2,
+                                           2, 0, -7, 0, 0, 0,   0, 1, 4};
+    test_example( "Rectangular Matrix", 3, 6, rectangular, rectangular_rref );
 
     return 0;
 }

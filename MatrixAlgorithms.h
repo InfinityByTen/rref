@@ -4,33 +4,58 @@
 
 #include <boost/optional.hpp>
 
-Number
-partial_pivot( Matrix& mat, size_t column_index )
+#include <utility>
+
+/* gets the maximum absolute entry in the given column starting from a row index.
+ * returns pair(index, value)
+ */
+std::pair< size_t, Number >
+get_max_abs_entry_in_column( Matrix& mat, size_t column_index, size_t start_row )
 {
     size_t max_index = 0;
     Number max_entry = 0;
-    for ( size_t row = column_index; row < mat.rows( ); ++row )
+    for ( size_t row = start_row; row < mat.rows( ); ++row )
     {
         if ( abs( mat( row, column_index ) ) > max_entry )
         {
-            max_entry = mat( row, column_index );
+            max_entry = abs( mat( row, column_index ) );
             max_index = row;
         }
     }
+    return std::make_pair( max_index, max_entry );
+}
 
-    if ( max_index != column_index && max_entry != 0 )
+// returns the index of the pivot column. If it is an all zero row, returns an overflow of the
+// column index.
+size_t
+partial_pivot( Matrix& mat, size_t iteration )
+{
+    auto pivot_column = iteration;
+    auto entry = get_max_abs_entry_in_column( mat, pivot_column, iteration );
+    while ( entry.second == 0 && pivot_column < mat.columns( ) - 1 )
+    {
+        entry = get_max_abs_entry_in_column( mat, ++pivot_column, iteration );
+    }
+
+    if ( entry.second != 0 && entry.first != iteration )
     {
         // TODO: see if this can be any smarter.
         // swap max_index row with row corresponding to column_index
         for ( size_t column = 0; column < mat.columns( ); ++column )
         {
             Number temp;
-            temp = mat( max_index, column );
-            mat( max_index, column ) = mat( column_index, column );
-            mat( column_index, column ) = temp;
+            temp = mat( entry.first, column );
+            mat( entry.first, column ) = mat( iteration, column );
+            mat( iteration, column ) = temp;
         }
+        return pivot_column;
     }
-    return max_entry;
+    if ( entry.second == 0 )
+    {
+        // TODO: Fix hacky solution for complete zero row
+        return pivot_column + 1;
+    }
+    return pivot_column;
 }
 
 /* normalizes the row corresponding to the row_index (zero based)
@@ -59,28 +84,32 @@ normalize( Matrix& mat, size_t row_index )
     }
 }
 
+// computes the reduced row echelon form of a matrix.
+// returns false if a division by zero error happens and true on success
 bool
 rref( Matrix& mat )
 {
     for ( size_t iteration = 0; iteration < mat.rows( ); ++iteration )
     {
-        Number p = partial_pivot( mat, iteration );
-        if ( p != 0 )
-        {
-            normalize( mat, iteration );
-        }
+        auto p = partial_pivot( mat, iteration );
+        normalize( mat, iteration );
 
         // TODO: extract out below as gauss elimination step
+        if ( p == mat.columns( ) )
+        {
+            break;
+        }
+
         for ( size_t row = 0; row < mat.rows( ); ++row )
         {
-            if ( row == iteration || p == 0 )
+            if ( row == iteration )
             {
                 continue;
             }
             Number factor;
             try
             {
-                factor = mat( row, iteration ) / mat( iteration, iteration );
+                factor = mat( row, p ) / mat( iteration, p );
             }
             catch ( const std::overflow_error )
             {
