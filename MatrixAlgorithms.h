@@ -46,19 +46,26 @@ swap_rows( Matrix& mat, size_t row1, size_t row2 )
  * column index.
  */
 size_t
-partial_pivot( Matrix& mat, size_t iteration )
+partial_pivot( Matrix& mat,
+               size_t iteration,
+               std::chrono::duration< double >& max_abs_value,
+               std::chrono::duration< double >& swapping )
 {
     auto pivot_column = iteration;
+    auto tick_max = std::chrono::high_resolution_clock::now( );
     auto entry = get_max_abs_entry_in_column( mat, pivot_column, iteration );
     while ( entry.second == 0 && pivot_column < mat.columns( ) - 1 )
     {
         entry = get_max_abs_entry_in_column( mat, ++pivot_column, iteration );
     }
+    max_abs_value += ( std::chrono::high_resolution_clock::now( ) - tick_max );
 
     if ( entry.second != 0 && entry.first != iteration )
     {
+        auto tick_swap = std::chrono::high_resolution_clock::now( );
         // swap max_index row with row corresponding to column_index
         swap_rows( mat, entry.first, iteration );
+        swapping += ( std::chrono::high_resolution_clock::now( ) - tick_swap );
         return pivot_column;
     }
     if ( entry.second == 0 )
@@ -125,11 +132,17 @@ gauss_elimination( Matrix& mat, size_t iteration, size_t pivot_index )
 void
 publish_metrics( std::chrono::duration< double > elapsed,
                  std::chrono::duration< double > pivoting,
+                 std::chrono::duration< double > max_abs_value,
+                 std::chrono::duration< double > swapping,
                  std::chrono::duration< double > normalization,
                  std::chrono::duration< double > gauss_elimination )
 {
     std::cout << "Total execution Time : " << elapsed.count( ) << std::endl;
-    std::cout << "Pivoting: " << ( pivoting.count( ) / elapsed.count( ) ) * 100 << "/%"
+    std::cout << "Pivoting: " << ( pivoting.count( ) / elapsed.count( ) ) * 100 << "/% "
+              << "Split: "
+              << "Getting max entry: " << ( max_abs_value.count( ) / pivoting.count( ) ) * 100
+              << "/% "
+              << "Swapping Rows: " << ( swapping.count( ) / pivoting.count( ) ) * 100 << "/% "
               << std::endl;
     std::cout << "Normalization: " << ( normalization.count( ) / elapsed.count( ) ) * 100 << "/%"
               << std::endl;
@@ -145,6 +158,8 @@ rref( Matrix& mat )
 {
     auto start = std::chrono::high_resolution_clock::now( );
     std::chrono::duration< double > pivoting;
+    std::chrono::duration< double > max_abs_value;
+    std::chrono::duration< double > swapping;
     std::chrono::duration< double > normalization;
     std::chrono::duration< double > gauss_elim;
 
@@ -152,7 +167,7 @@ rref( Matrix& mat )
     for ( size_t iteration = 0; iteration < max_iter; ++iteration )
     {
         auto tick = std::chrono::high_resolution_clock::now( );
-        auto p = partial_pivot( mat, iteration );
+        auto p = partial_pivot( mat, iteration, max_abs_value, swapping );
         pivoting += ( std::chrono::high_resolution_clock::now( ) - tick );
 
         auto tick_norm = std::chrono::high_resolution_clock::now( );
@@ -171,5 +186,5 @@ rref( Matrix& mat )
     }
     std::chrono::duration< double > elapsed
         = ( std::chrono::high_resolution_clock::now( ) - start );
-    publish_metrics( elapsed, pivoting, normalization, gauss_elim );
+    publish_metrics( elapsed, pivoting, max_abs_value, swapping, normalization, gauss_elim );
 }
