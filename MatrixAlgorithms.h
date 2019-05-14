@@ -7,6 +7,8 @@
 #include <chrono>
 #include <utility>
 
+// TODO: Make the file into a class than free standing functions.
+
 /* gets the maximum absolute entry in the given column starting from a row index.
  * returns pair(index, value)
  */
@@ -26,8 +28,9 @@ get_max_abs_entry_in_column( Matrix& mat, size_t column_index, size_t start_row 
     return std::make_pair( max_index, max_entry );
 }
 
-// returns the index of the pivot column. If it is an all zero row, returns an overflow of the
-// column index.
+/* returns the index of the pivot column. If it is an all zero row, returns an overflow of the
+ * column index.
+ */
 size_t
 partial_pivot( Matrix& mat, size_t iteration )
 {
@@ -75,12 +78,38 @@ normalize( Matrix& mat, size_t row_index )
         }
         if ( non_zero )
         {
-            mat( row_index, column ) /= non_zero.get( );
+            mat( row_index, column ) /= non_zero.get( );  // cannot throw exception. Always defined.
         }
         else
         {
             non_zero = mat( row_index, column );
             mat( row_index, column ) = 1;
+        }
+    }
+}
+
+/* performs one iteration of (full) gauss elimination.
+ * Reduces all the rows based on the pivot_index column in the row of the iteration value.
+ * (iteration, pivot) is the next largest element in absolute values, that can be used for the row
+ * reduction of the matrix. This is a modified form that's needed for reduced row echelon form
+ * instead of the one that converts it into an upper triangular one.
+ */
+
+void
+gauss_elimination( Matrix& mat, size_t iteration, size_t pivot_index )
+{
+    for ( size_t row = 0; row < mat.rows( ); ++row )
+    {
+        if ( row == iteration )
+        {
+            continue;
+        }
+        // Crucial to keep factor a copy. auto casts it into reference.
+        Number factor = mat( row, pivot_index ) / mat( iteration, pivot_index );
+
+        for ( size_t column = 0; column < mat.columns( ); ++column )
+        {
+            mat( row, column ) -= mat( iteration, column ) * factor;
         }
     }
 }
@@ -100,9 +129,10 @@ publish_metrics( std::chrono::duration< double > elapsed,
               << "/%" << std::endl;
 }
 
-// computes the reduced row echelon form of a matrix.
-// returns false if a division by zero error happens and true on success
-bool
+/*
+ *computes the reduced row echelon form of a matrix.
+ */
+void
 rref( Matrix& mat )
 {
     auto start = std::chrono::high_resolution_clock::now( );
@@ -120,38 +150,17 @@ rref( Matrix& mat )
         normalize( mat, iteration );
         normalization += ( std::chrono::high_resolution_clock::now( ) - tick_norm );
 
-        auto tick_gs = std::chrono::high_resolution_clock::now( );
-        // TODO: extract out below as gauss elimination step
         if ( p == mat.columns( ) )
         {
-            // all zero row. Exit gauss elimination.
+            // all zero row.
             break;
         }
 
-        for ( size_t row = 0; row < mat.rows( ); ++row )
-        {
-            if ( row == iteration )
-            {
-                continue;
-            }
-            Number factor;
-            try
-            {
-                factor = mat( row, p ) / mat( iteration, p );
-            }
-            catch ( const std::overflow_error )
-            {
-                return false;
-            }
-            for ( size_t column = 0; column < mat.columns( ); ++column )
-            {
-                mat( row, column ) -= mat( iteration, column ) * factor;
-            }
-        }
+        auto tick_gs = std::chrono::high_resolution_clock::now( );
+        gauss_elimination( mat, iteration, p );
         gauss_elim += ( std::chrono::high_resolution_clock::now( ) - tick_gs );
     }
     std::chrono::duration< double > elapsed
         = ( std::chrono::high_resolution_clock::now( ) - start );
     publish_metrics( elapsed, pivoting, normalization, gauss_elim );
-    return true;
 }

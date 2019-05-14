@@ -13,8 +13,9 @@ test_example( std::string test_name,
 {
     Matrix mat1( row, column, input );
     Matrix mat2( row, column, expected );
-    std::cout << test_name << ":" << std::endl
-              << ( rref( mat1 ) && mat1 == mat2 ? "Test Passed" : "Test Failed" ) << std::endl;
+    std::cout << test_name << ":" << std::endl;
+    rref( mat1 );
+    std::cout << ( mat1 == mat2 ? "Test Passed" : "Test Failed" ) << std::endl << std::endl;
 }
 
 int

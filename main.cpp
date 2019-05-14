@@ -20,15 +20,9 @@ main( int argc, char const* argv[] )
     std::cout << std::endl;
     mat.print( );
 
-    if ( rref( mat ) )
-    {
-        std::cout << "The Reduced Row Rchelon Form (RREF) of your matrix is:" << std::endl;
-        mat.print( );
-    }
-    else
-    {
-        std::cout << " Error: Matrix could not be reduced" << std::endl;
-    }
+    rref( mat );
+    std::cout << "The Reduced Row Rchelon Form (RREF) of your matrix is:" << std::endl;
+    mat.print( );
 
     return 0;
 }
