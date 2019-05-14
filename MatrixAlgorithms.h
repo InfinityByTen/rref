@@ -28,6 +28,20 @@ get_max_abs_entry_in_column( Matrix& mat, size_t column_index, size_t start_row 
     return std::make_pair( max_index, max_entry );
 }
 
+void
+swap_rows( Matrix& mat, size_t row1, size_t row2 )
+{
+    // TODO: see if this can be any smarter.
+    for ( size_t column = 0; column < mat.columns( ); ++column )
+    {
+        // TODO: fix this
+        // Crucial to keep factor a copy. auto casts it into reference.
+        Number temp = mat( row1, column );
+        mat( row1, column ) = mat( row2, column );
+        mat( row2, column ) = temp;
+    }
+}
+
 /* returns the index of the pivot column. If it is an all zero row, returns an overflow of the
  * column index.
  */
@@ -43,15 +57,8 @@ partial_pivot( Matrix& mat, size_t iteration )
 
     if ( entry.second != 0 && entry.first != iteration )
     {
-        // TODO: see if this can be any smarter.
         // swap max_index row with row corresponding to column_index
-        for ( size_t column = 0; column < mat.columns( ); ++column )
-        {
-            Number temp;
-            temp = mat( entry.first, column );
-            mat( entry.first, column ) = mat( iteration, column );
-            mat( iteration, column ) = temp;
-        }
+        swap_rows( mat, entry.first, iteration );
         return pivot_column;
     }
     if ( entry.second == 0 )
@@ -104,6 +111,7 @@ gauss_elimination( Matrix& mat, size_t iteration, size_t pivot_index )
         {
             continue;
         }
+        // TODO: Fix this
         // Crucial to keep factor a copy. auto casts it into reference.
         Number factor = mat( row, pivot_index ) / mat( iteration, pivot_index );
 
