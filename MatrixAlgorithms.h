@@ -1,10 +1,12 @@
 // An engine to compute the RREF of a Matrix.
 
+#pragma once
+
 #include "Matrix.h"
+#include "ProfilingHelper.h"
 
 #include <boost/optional.hpp>
 
-#include <chrono>
 #include <utility>
 
 // TODO: Make the file into a class than free standing functions.
@@ -28,6 +30,21 @@ get_max_abs_entry_in_column( Matrix& mat, size_t column_index, size_t start_row 
     return std::make_pair( max_index, max_entry );
 }
 
+/* gets the next non-zero maximum absolute entry starting from a given pivot column.
+ * returns pair(index, value)
+ * pivot_column is an out-parameter.
+ */
+std::pair< size_t, Number >
+find_next_pivot_entry( Matrix& mat, size_t iteration, size_t& pivot_column )
+{
+    auto pivot_entry = get_max_abs_entry_in_column( mat, pivot_column, iteration );
+    while ( pivot_entry.second == 0 && pivot_column < mat.columns( ) - 1 )
+    {
+        pivot_entry = get_max_abs_entry_in_column( mat, ++pivot_column, iteration );
+    }
+    return pivot_entry;
+}
+
 void
 swap_rows( Matrix& mat, size_t row1, size_t row2 )
 {
@@ -44,28 +61,24 @@ swap_rows( Matrix& mat, size_t row1, size_t row2 )
 
 /* returns the index of the pivot column. If it is an all zero row, returns an overflow of the
  * column index.
+ * Timekeepers are out-params for profiling
  */
 size_t
 partial_pivot( Matrix& mat,
                size_t iteration,
-               std::chrono::duration< double >& max_abs_value,
-               std::chrono::duration< double >& swapping )
+               Duration& max_abs_value_timekeeper,
+               Duration& swapping_timekeeper )
 {
     auto pivot_column = iteration;
-    auto tick_max = std::chrono::high_resolution_clock::now( );
-    auto entry = get_max_abs_entry_in_column( mat, pivot_column, iteration );
-    while ( entry.second == 0 && pivot_column < mat.columns( ) - 1 )
-    {
-        entry = get_max_abs_entry_in_column( mat, ++pivot_column, iteration );
-    }
-    max_abs_value += ( std::chrono::high_resolution_clock::now( ) - tick_max );
+
+    auto entry = execute_with_profiling( find_next_pivot_entry, max_abs_value_timekeeper, mat,
+                                         (size_t)iteration, (size_t&)pivot_column );
 
     if ( entry.second != 0 && entry.first != iteration )
     {
-        auto tick_swap = std::chrono::high_resolution_clock::now( );
         // swap max_index row with row corresponding to column_index
-        swap_rows( mat, entry.first, iteration );
-        swapping += ( std::chrono::high_resolution_clock::now( ) - tick_swap );
+        execute_with_profiling( swap_rows, swapping_timekeeper, mat, (size_t)entry.first,
+                                (size_t)iteration );
         return pivot_column;
     }
     if ( entry.second == 0 )
@@ -129,27 +142,6 @@ gauss_elimination( Matrix& mat, size_t iteration, size_t pivot_index )
     }
 }
 
-void
-publish_metrics( std::chrono::duration< double > elapsed,
-                 std::chrono::duration< double > pivoting,
-                 std::chrono::duration< double > max_abs_value,
-                 std::chrono::duration< double > swapping,
-                 std::chrono::duration< double > normalization,
-                 std::chrono::duration< double > gauss_elimination )
-{
-    std::cout << "Total execution Time : " << elapsed.count( ) << std::endl;
-    std::cout << "Pivoting: " << ( pivoting.count( ) / elapsed.count( ) ) * 100 << "/% "
-              << "Split: "
-              << "Getting max entry: " << ( max_abs_value.count( ) / pivoting.count( ) ) * 100
-              << "/% "
-              << "Swapping Rows: " << ( swapping.count( ) / pivoting.count( ) ) * 100 << "/% "
-              << std::endl;
-    std::cout << "Normalization: " << ( normalization.count( ) / elapsed.count( ) ) * 100 << "/%"
-              << std::endl;
-    std::cout << "Gauss Elimination: " << ( gauss_elimination.count( ) / elapsed.count( ) ) * 100
-              << "/%" << std::endl;
-}
-
 /*
  *computes the reduced row echelon form of a matrix.
  */
@@ -157,34 +149,31 @@ void
 rref( Matrix& mat )
 {
     auto start = std::chrono::high_resolution_clock::now( );
-    std::chrono::duration< double > pivoting;
-    std::chrono::duration< double > max_abs_value;
-    std::chrono::duration< double > swapping;
-    std::chrono::duration< double > normalization;
-    std::chrono::duration< double > gauss_elim;
+    Duration pivoting_timekeeper;
+    Duration max_abs_value_timekeeper;
+    Duration swapping_timekeeper;
+    Duration normalization_timekeeper;
+    Duration gauss_elim_timekeeper;
 
     auto max_iter = std::min( mat.rows( ), mat.columns( ) );
     for ( size_t iteration = 0; iteration < max_iter; ++iteration )
     {
-        auto tick = std::chrono::high_resolution_clock::now( );
-        auto p = partial_pivot( mat, iteration, max_abs_value, swapping );
-        pivoting += ( std::chrono::high_resolution_clock::now( ) - tick );
+        auto pivot = execute_with_profiling( partial_pivot, pivoting_timekeeper, mat,
+                                             (size_t)iteration, (Duration&)max_abs_value_timekeeper,
+                                             (Duration&)swapping_timekeeper );
 
-        auto tick_norm = std::chrono::high_resolution_clock::now( );
-        normalize( mat, iteration );
-        normalization += ( std::chrono::high_resolution_clock::now( ) - tick_norm );
+        execute_with_profiling( normalize, normalization_timekeeper, mat, (size_t)iteration );
 
-        if ( p == mat.columns( ) )
+        if ( pivot == mat.columns( ) )
         {
             // all zero row.
             break;
         }
-
-        auto tick_gs = std::chrono::high_resolution_clock::now( );
-        gauss_elimination( mat, iteration, p );
-        gauss_elim += ( std::chrono::high_resolution_clock::now( ) - tick_gs );
+        execute_with_profiling( gauss_elimination, gauss_elim_timekeeper, mat, (size_t)iteration,
+                                (size_t)pivot );
     }
-    std::chrono::duration< double > elapsed
-        = ( std::chrono::high_resolution_clock::now( ) - start );
-    publish_metrics( elapsed, pivoting, max_abs_value, swapping, normalization, gauss_elim );
+
+    Duration elapsed = ( std::chrono::high_resolution_clock::now( ) - start );
+    publish_metrics( elapsed, pivoting_timekeeper, max_abs_value_timekeeper, swapping_timekeeper,
+                     normalization_timekeeper, gauss_elim_timekeeper );
 }
