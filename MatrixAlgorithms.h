@@ -140,7 +140,8 @@ rref( Matrix& mat )
     std::chrono::duration< double > normalization;
     std::chrono::duration< double > gauss_elim;
 
-    for ( size_t iteration = 0; iteration < mat.rows( ); ++iteration )
+    auto max_iter = std::min( mat.rows( ), mat.columns( ) );
+    for ( size_t iteration = 0; iteration < max_iter; ++iteration )
     {
         auto tick = std::chrono::high_resolution_clock::now( );
         auto p = partial_pivot( mat, iteration );

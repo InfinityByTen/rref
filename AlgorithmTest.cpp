@@ -48,5 +48,10 @@ main( int argc, char const* argv[] )
                                            2, 0, -7, 0, 0, 0,   0, 1, 4};
     test_example( "Rectangular Matrix", 3, 6, rectangular, rectangular_rref );
 
+    std::vector< Number > rectangular_switched_rref{1, 0, 0, 0, 1, 0, 0, 0, 1,
+                                                    0, 0, 0, 0, 0, 0, 0, 0, 0};
+    test_example( "Rectangular Matrix switched sizes", 6, 3, rectangular,
+                  rectangular_switched_rref );
+
     return 0;
 }
